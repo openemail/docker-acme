@@ -15,9 +15,9 @@ if [[ "${SKIP_HTTP_VERIFICATION}" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
   SKIP_HTTP_VERIFICATION=y
 fi
 
-# Request certificate for MAILCOW_HOSTNAME ony
-if [[ "${ONLY_MAILCOW_HOSTNAME}" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
-  ONLY_MAILCOW_HOSTNAME=y
+# Request certificate for OPENEMAIL_HOSTNAME only
+if [[ "${ONLY_OPENEMAIL_HOSTNAME}" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
+  ONLY_OPENEMAIL_HOSTNAME=y
 fi
 
 log_f() {

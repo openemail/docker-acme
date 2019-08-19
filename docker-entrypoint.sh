@@ -1,4 +1,4 @@
-OPENEMAIL#!/bin/bash
+#!/bin/bash
 set -o pipefail
 exec 5>&1
 

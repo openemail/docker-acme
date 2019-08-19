@@ -164,8 +164,8 @@ else
       cp ${ACME_BASE}/acme/key.pem ${ACME_BASE}/key.pem
       # Restarting with env var set to trigger a restart,
       exec env TRIGGER_RESTART=1 $(readlink -f "$0")
-    fiopenemail
-  ISSUER="openemail"
+    fi
+  ISSUER="mailcow"
   else
     log_f "Restoring openemail snake-oil certificates and restarting script..."
     cp ${SSL_EXAMPLE}/cert.pem ${ACME_BASE}/cert.pem

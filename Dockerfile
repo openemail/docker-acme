@@ -1,4 +1,4 @@
-FROM alpine:3.10
+FROM lsiobase/alpine
 
 LABEL maintainer "Chinthaka Deshapriya <chinthaka@cybergate.lk>"
 

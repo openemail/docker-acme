@@ -16,9 +16,9 @@ if [[ "${SKIP_HTTP_VERIFICATION}" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
   SKIP_HTTP_VERIFICATION=y
 fi
 
-# Request certificate for OPENEMAIL_HOSTNAME only
-if [[ "${ONLY_OPENEMAIL_HOSTNAME}" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
-  ONLY_OPENEMAIL_HOSTNAME=y
+# Request certificate for MAILCOW_HOSTNAME only
+if [[ "${ONLY_MAILCOW_HOSTNAME}" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
+  ONLY_MAILCOW_HOSTNAME=y
 fi
 
 # Request individual certificate for every domain
@@ -67,19 +67,19 @@ fi
 if [[ -f ${ACME_BASE}/cert.pem ]] && [[ -f ${ACME_BASE}/key.pem ]] && [[ $(stat -c%s ${ACME_BASE}/cert.pem) != 0 ]]; then
   ISSUER=$(openssl x509 -in ${ACME_BASE}/cert.pem -noout -issuer)
   if [[ ${ISSUER} != *"Let's Encrypt"* && ${ISSUER} != *"mailcow"* && ${ISSUER} != *"Fake LE Intermediate"* ]]; then
-    log_f "Found certificate with issuer other than openemail snake-oil CA and Let's Encrypt, skipping ACME client..."
+    log_f "Found certificate with issuer other than mailcow snake-oil CA and Let's Encrypt, skipping ACME client..."
     sleep 3650d
     exec $(readlink -f "$0")
   fi
 else
-  if [[ -f ${ACME_BASE}/${OPENEMAIL_HOSTNAME}/cert.pem ]] && [[ -f ${ACME_BASE}/${OPENEMAIL_HOSTNAME}/key.pem ]] && verify_hash_match ${ACME_BASE}/${OPENEMAIL_HOSTNAME}/cert.pem ${ACME_BASE}/${OPENEMAIL_HOSTNAME}/key.pem; then
+  if [[ -f ${ACME_BASE}/${MAILCOW_HOSTNAME}/cert.pem ]] && [[ -f ${ACME_BASE}/${MAILCOW_HOSTNAME}/key.pem ]] && verify_hash_match ${ACME_BASE}/${MAILCOW_HOSTNAME}/cert.pem ${ACME_BASE}/${MAILCOW_HOSTNAME}/key.pem; then
     log_f "Restoring previous acme certificate and restarting script..."
-    cp ${ACME_BASE}/${OPENEMAIL_HOSTNAME}/cert.pem ${ACME_BASE}/cert.pem
-    cp ${ACME_BASE}/${OPENEMAIL_HOSTNAME}/key.pem ${ACME_BASE}/key.pem
+    cp ${ACME_BASE}/${MAILCOW_HOSTNAME}/cert.pem ${ACME_BASE}/cert.pem
+    cp ${ACME_BASE}/${MAILCOW_HOSTNAME}/key.pem ${ACME_BASE}/key.pem
     # Restarting with env var set to trigger a restart,
     exec env TRIGGER_RESTART=1 $(readlink -f "$0")
   else
-    log_f "Restoring openemail snake-oil certificates and restarting script..."
+    log_f "Restoring mailcow snake-oil certificates and restarting script..."
     cp ${SSL_EXAMPLE}/cert.pem ${ACME_BASE}/cert.pem
     cp ${SSL_EXAMPLE}/key.pem ${ACME_BASE}/key.pem
     exec env TRIGGER_RESTART=1 $(readlink -f "$0")
@@ -113,7 +113,7 @@ log_f "Initializing, please wait... "
 
 while true; do
 
-  # Re-using previous acme-openemail account and domain keys
+  # Re-using previous acme-mailcow account and domain keys
   if [[ ! -f ${ACME_BASE}/acme/key.pem ]]; then
     log_f "Generating missing domain private rsa key..."
     openssl genrsa 4096 > ${ACME_BASE}/acme/key.pem
@@ -174,14 +174,14 @@ while true; do
   IPV6=$(get_ipv6)
   log_f "OK" no_date
 
-  # Hard-fail on CAA errors for OPENEMAIL_HOSTNAME
-  MH_PARENT_DOMAIN=$(echo ${OPENEMAIL_HOSTNAME} | cut -d. -f2-)
+  # Hard-fail on CAA errors for MAILCOW_HOSTNAME
+  MH_PARENT_DOMAIN=$(echo ${MAILCOW_HOSTNAME} | cut -d. -f2-)
   MH_CAAS=( $(dig CAA ${MH_PARENT_DOMAIN} +short | sed -n 's/\d issue "\(.*\)"/\1/p') )
   if [[ ! -z ${MH_CAAS} ]]; then
     if [[ ${MH_CAAS[@]} =~ "letsencrypt.org" ]]; then
       log_f "Validated CAA for parent domain ${MH_PARENT_DOMAIN}"
     else
-      log_f "Skipping ACME validation: Lets Encrypt disallowed for ${OPENEMAIL_HOSTNAME} by CAA record, retrying in 1h..."
+      log_f "Skipping ACME validation: Lets Encrypt disallowed for ${MAILCOW_HOSTNAME} by CAA record, retrying in 1h..."
       sleep 1h
       exec $(readlink -f "$0")
     fi
@@ -203,12 +203,12 @@ while true; do
     SQL_DOMAIN_ARR+=("${domains}")
   done <<< "${SQL_DOMAINS}"
 
-  if [[ ${ONLY_OPENEMAIL_HOSTNAME} != "y" ]]; then
+  if [[ ${ONLY_MAILCOW_HOSTNAME} != "y" ]]; then
   for SQL_DOMAIN in "${SQL_DOMAIN_ARR[@]}"; do
     unset VALIDATED_CONFIG_DOMAINS_SUBDOMAINS
     declare -a VALIDATED_CONFIG_DOMAINS_SUBDOMAINS
     for SUBDOMAIN in "${ADDITIONAL_WC_ARR[@]}"; do
-      if [[  "${SUBDOMAIN}.${SQL_DOMAIN}" != "${OPENEMAIL_HOSTNAME}" ]]; then
+      if [[  "${SUBDOMAIN}.${SQL_DOMAIN}" != "${MAILCOW_HOSTNAME}" ]]; then
         if check_domain "${SUBDOMAIN}.${SQL_DOMAIN}"; then
           VALIDATED_CONFIG_DOMAINS_SUBDOMAINS+=("${SUBDOMAIN}.${SQL_DOMAIN}")
         fi
@@ -218,11 +218,11 @@ while true; do
   done
   fi
 
-  if check_domain ${OPENEMAIL_HOSTNAME}; then
-    VALIDATED_OPENEMAIL_HOSTNAME="${OPENEMAIL_HOSTNAME}"
+  if check_domain ${MAILCOW_HOSTNAME}; then
+    VALIDATED_MAILCOW_HOSTNAME="${MAILCOW_HOSTNAME}"
   fi
 
-  if [[ ${ONLY_OPENEMAIL_HOSTNAME} != "y" ]]; then
+  if [[ ${ONLY_MAILCOW_HOSTNAME} != "y" ]]; then
   for SAN in "${ADDITIONAL_SAN_ARR[@]}"; do
     # Skip on CAA errors for SAN
     SAN_PARENT_DOMAIN=$(echo ${SAN} | cut -d. -f2-)
@@ -235,7 +235,7 @@ while true; do
         continue
       fi
     fi
-    if [[ ${SAN} == ${OPENEMAIL_HOSTNAME} ]]; then
+    if [[ ${SAN} == ${MAILCOW_HOSTNAME} ]]; then
       continue
     fi
     if check_domain ${SAN}; then
@@ -247,10 +247,10 @@ while true; do
   # Unique domains for server certificate
   if [[ ${ENABLE_SSL_SNI} == "y" ]]; then
     # create certificate for server name and fqdn SANs only
-    SERVER_SAN_VALIDATED=(${VALIDATED_OPENEMAIL_HOSTNAME} $(echo ${ADDITIONAL_VALIDATED_SAN[*]} | xargs -n1 | sort -u | xargs))
+    SERVER_SAN_VALIDATED=(${VALIDATED_MAILCOW_HOSTNAME} $(echo ${ADDITIONAL_VALIDATED_SAN[*]} | xargs -n1 | sort -u | xargs))
   else
     # create certificate for all domains, including all subdomains from other domains [*]
-    SERVER_SAN_VALIDATED=(${VALIDATED_OPENEMAIL_HOSTNAME} $(echo ${VALIDATED_CONFIG_DOMAINS[*]} ${ADDITIONAL_VALIDATED_SAN[*]} | xargs -n1 | sort -u | xargs))
+    SERVER_SAN_VALIDATED=(${VALIDATED_MAILCOW_HOSTNAME} $(echo ${VALIDATED_CONFIG_DOMAINS[*]} ${ADDITIONAL_VALIDATED_SAN[*]} | xargs -n1 | sort -u | xargs))
   fi
   if [[ ! -z ${SERVER_SAN_VALIDATED[*]} ]]; then
     CERT_NAME=${SERVER_SAN_VALIDATED[0]}
@@ -314,7 +314,7 @@ while true; do
 
   if [[ -z ${VALIDATED_CERTIFICATES[*]} ]]; then
     log_f "Cannot validate any hostnames, skipping Let's Encrypt for 1 hour."
-    log_f "Use SKIP_LETS_ENCRYPT=y in openemail.conf to skip it permanently."
+    log_f "Use SKIP_LETS_ENCRYPT=y in mailcow.conf to skip it permanently."
     redis-cli -h redis SET ACME_FAIL_TIME "$(date +%s)"
     sleep 1h
     exec $(readlink -f "$0")
